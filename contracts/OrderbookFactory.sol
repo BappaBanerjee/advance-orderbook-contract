@@ -53,7 +53,7 @@ contract OrderbookFactory {
     } 
 
     function deductBalance(address _user, address _token, uint _amount) public  onlyMapContracts{
-        if(balanceOf[msg.sender][_token] < _amount) revert Insufficient_Balance();
+        if(balanceOf[_user][_token] < _amount) revert Insufficient_Balance();
         balanceOf[_user][_token] -= _amount;
     }
 
@@ -94,6 +94,7 @@ contract OrderbookFactory {
     function buyAtMarketPrice(uint _total, address _base, address _quote) public{
         require(_total > 0, "invalid params");
         if(balanceOf[msg.sender][_quote] < _total) revert Insufficient_Balance();
+        if(address(orderbooks[_base][_quote]) == address(0)) revert Orderbook_Not_Found();
         Orderbook orderbook = orderbooks[_base][_quote];
         orderbook.buyAtMarketPrice(msg.sender, _total);
     }
@@ -101,6 +102,7 @@ contract OrderbookFactory {
     function sellAtMarketPrice(uint _total, address _base, address _quote) public{
         require(_total > 0 , "invalid params");
         if(balanceOf[msg.sender][_base] < _total) revert Insufficient_Balance();
+        if(address(orderbooks[_base][_quote]) == address(0)) revert Orderbook_Not_Found();
         Orderbook orderbook = orderbooks[_base][_quote];
         orderbook.sellAtMarketPrice(msg.sender, _total);
     }

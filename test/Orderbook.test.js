@@ -432,15 +432,12 @@ describe("Orbook smart contract", function () {
     });
 
     it("should fill the partial sell order", async function () {
-      let sellOrders = await orderbook.getSellorders();
-      let sellorder = sellOrders[0];
-
       let limitPrice = BigInt(100 * DECIMAL);
-      let quantity = BigInt(8 * DECIMAL);
-      let total = (limitPrice * quantity) / BigInt(DECIMAL);
+      let _quantity = BigInt(8 * DECIMAL);
+      let total = (limitPrice * _quantity) / BigInt(DECIMAL);
       await orderbookFactory
         .connect(anotherAccount)
-        .placeBuyOrder(limitPrice, quantity, baseTokenAddr, quoteTokenAddr);
+        .placeBuyOrder(limitPrice, _quantity, baseTokenAddr, quoteTokenAddr);
 
       expect(await orderbookFactory._balanceOf(baseTokenAddr)).to.equal(
         BigInt(INITIAL_BAL) - BigInt(10 * DECIMAL)
@@ -452,7 +449,7 @@ describe("Orbook smart contract", function () {
 
       expect(
         await orderbookFactory.connect(anotherAccount)._balanceOf(baseTokenAddr)
-      ).to.equal(BigInt(INITIAL_BAL) + quantity);
+      ).to.equal(BigInt(INITIAL_BAL) + _quantity);
 
       expect(
         await orderbookFactory
@@ -472,21 +469,37 @@ describe("Orbook smart contract", function () {
       expect(order.trader).to.equal(deployer.address);
       expect(order.orderType).to.equal(BigInt(1));
       expect(order.price).to.equal(limitPrice);
-      expect(order.quantity).to.equal(sellorder.quantity - quantity);
+      expect(order.quantity).to.equal(quantity - _quantity);
       expect(order.isFilled).to.equal(false);
       expect(order.baseToken).to.equal(baseTokenAddr);
       expect(order.quoteToken).to.equal(quoteTokenAddr);
     });
 
     it("should fill the partial buy order", async function () {
-      let sellOrders = await orderbook.getSellorders();
-      let sellorder = sellOrders[0];
-
-      let quantity = BigInt(12 * DECIMAL);
+      let _quantity = BigInt(12 * DECIMAL);
       await orderbookFactory
         .connect(anotherAccount)
-        .placeBuyOrder(limitPrice, quantity, baseTokenAddr, quoteTokenAddr);
+        .placeBuyOrder(limitPrice, _quantity, baseTokenAddr, quoteTokenAddr);
 
+      expect(await orderbookFactory._balanceOf(baseTokenAddr)).to.equal(
+        BigInt(INITIAL_BAL) - quantity
+      );
+
+      expect(await orderbookFactory._balanceOf(quoteTokenAddr)).to.equal(
+        BigInt(INITIAL_BAL) + (limitPrice * quantity) / BigInt(DECIMAL)
+      );
+
+      expect(
+        await orderbookFactory.connect(anotherAccount)._balanceOf(baseTokenAddr)
+      ).to.equal(BigInt(INITIAL_BAL) + quantity);
+
+      expect(
+        await orderbookFactory
+          .connect(anotherAccount)
+          ._balanceOf(quoteTokenAddr)
+      ).to.equal(
+        BigInt(INITIAL_BAL) - (limitPrice * _quantity) / BigInt(DECIMAL)
+      );
       let buyorders = await orderbook.getBuyorders();
       let newSellOrders = await orderbook.getSellorders();
 
@@ -499,14 +512,14 @@ describe("Orbook smart contract", function () {
       expect(order.trader).to.equal(anotherAccount.address);
       expect(order.orderType).to.equal(BigInt(0));
       expect(order.price).to.equal(limitPrice);
-      expect(order.quantity).to.equal(quantity - sellorder.quantity);
+      expect(order.quantity).to.equal(_quantity - quantity);
       expect(order.isFilled).to.equal(false);
       expect(order.baseToken).to.equal(baseTokenAddr);
       expect(order.quoteToken).to.equal(quoteTokenAddr);
     });
   });
 
-  describe.only("placing sellorders after buyorder", function () {
+  describe("placing sellorders after buyorder", function () {
     let limitPrice = BigInt(100 * DECIMAL);
     let quantity = BigInt(10 * DECIMAL);
 
@@ -563,6 +576,248 @@ describe("Orbook smart contract", function () {
           .connect(anotherAccount)
           ._balanceOf(quoteTokenAddr)
       ).to.equal(BigInt(INITIAL_BAL) + quoteToken);
+    });
+
+    it("should fill the partial buy order", async function () {
+      let _quantity = BigInt(8 * DECIMAL);
+      let total = (limitPrice * _quantity) / BigInt(DECIMAL);
+
+      await orderbookFactory
+        .connect(anotherAccount)
+        .placeSellOrder(limitPrice, _quantity, baseTokenAddr, quoteTokenAddr);
+
+      expect(await orderbookFactory._balanceOf(baseTokenAddr)).to.equal(
+        BigInt(INITIAL_BAL) + _quantity
+      );
+
+      expect(await orderbookFactory._balanceOf(quoteTokenAddr)).to.equal(
+        BigInt(INITIAL_BAL) - (limitPrice * quantity) / BigInt(DECIMAL)
+      );
+
+      expect(
+        await orderbookFactory.connect(anotherAccount)._balanceOf(baseTokenAddr)
+      ).to.equal(BigInt(INITIAL_BAL) - _quantity);
+
+      expect(
+        await orderbookFactory
+          .connect(anotherAccount)
+          ._balanceOf(quoteTokenAddr)
+      ).to.equal(BigInt(INITIAL_BAL) + total);
+
+      let sellOrders = await orderbook.getSellorders();
+      expect(sellOrders.length).to.equal(0);
+
+      let buyOrders = await orderbook.getBuyorders();
+      expect(buyOrders.length).to.equal(1);
+      let order = buyOrders[0];
+
+      expect(order.orderId).to.equal(BigInt(1));
+      expect(order.trader).to.equal(deployer.address);
+      expect(order.orderType).to.equal(BigInt(0));
+      expect(order.price).to.equal(limitPrice);
+      expect(order.quantity).to.equal(quantity - _quantity);
+      expect(order.isFilled).to.equal(false);
+      expect(order.baseToken).to.equal(baseTokenAddr);
+      expect(order.quoteToken).to.equal(quoteTokenAddr);
+    });
+
+    it("should fill the partial sellOrder", async function () {
+      let _quantity = BigInt(12 * DECIMAL);
+
+      await orderbookFactory
+        .connect(anotherAccount)
+        .placeSellOrder(limitPrice, _quantity, baseTokenAddr, quoteTokenAddr);
+
+      expect(await orderbookFactory._balanceOf(baseTokenAddr)).to.equal(
+        BigInt(INITIAL_BAL) + quantity
+      );
+      expect(await orderbookFactory._balanceOf(quoteTokenAddr)).to.equal(
+        BigInt(INITIAL_BAL) - (limitPrice * quantity) / BigInt(DECIMAL)
+      );
+
+      expect(
+        await orderbookFactory.connect(anotherAccount)._balanceOf(baseTokenAddr)
+      ).to.equal(BigInt(INITIAL_BAL) - _quantity);
+
+      expect(
+        await orderbookFactory
+          .connect(anotherAccount)
+          ._balanceOf(quoteTokenAddr)
+      ).to.equal(
+        BigInt(INITIAL_BAL) + (limitPrice * quantity) / BigInt(DECIMAL)
+      );
+
+      let buyOrders = await orderbook.getBuyorders();
+      expect(buyOrders.length).to.equal(0);
+
+      let sellOrders = await orderbook.getSellorders();
+      expect(sellOrders.length).to.equal(1);
+      let order = sellOrders[0];
+
+      expect(order.orderId).to.equal(BigInt(1));
+      expect(order.trader).to.equal(anotherAccount.address);
+      expect(order.orderType).to.equal(BigInt(1));
+      expect(order.price).to.equal(limitPrice);
+      expect(order.quantity).to.equal(_quantity - quantity);
+      expect(order.isFilled).to.equal(false);
+      expect(order.baseToken).to.equal(baseTokenAddr);
+      expect(order.quoteToken).to.equal(quoteTokenAddr);
+    });
+  });
+
+  describe("buy at market price", () => {
+    it("should revert if amount is zero with msg as invalid params", async function () {
+      await expect(
+        orderbookFactory.buyAtMarketPrice(0, baseTokenAddr, quoteTokenAddr)
+      ).to.be.revertedWith("invalid params");
+    });
+
+    it("should revert with custom error msg Insufficient_Balance", async function () {
+      await expect(
+        orderbookFactory.buyAtMarketPrice(10, baseTokenAddr, quoteTokenAddr)
+      ).to.revertedWithCustomError(orderbookFactory, "Insufficient_Balance");
+    });
+
+    it("should revert with custom error Orderbook_Not_Found", async function () {
+      await addFunds();
+      expect(await orderbookFactory._balanceOf(baseTokenAddr)).to.equal(
+        BigInt(INITIAL_BAL)
+      );
+      await expect(
+        orderbookFactory.buyAtMarketPrice(
+          BigInt(10 * DECIMAL),
+          baseTokenAddr,
+          quoteTokenAddr
+        )
+      ).to.be.revertedWithCustomError(orderbookFactory, "Orderbook_Not_Found");
+    });
+
+    it("should revert with error msg no sell orders present", async function () {
+      await addFunds();
+      await orderbookFactory.createOrderbook(baseTokenAddr, quoteTokenAddr);
+      await expect(
+        orderbookFactory.buyAtMarketPrice(
+          BigInt(10 * DECIMAL),
+          baseTokenAddr,
+          quoteTokenAddr
+        )
+      ).to.revertedWith("no sell orders present");
+    });
+
+    describe("after placing some sell orders", () => {
+      let limitPrice = BigInt(10 * DECIMAL);
+      let quantity = BigInt(10 * DECIMAL);
+      beforeEach(async function () {
+        await addFunds();
+        await orderbookFactory.createOrderbook(baseTokenAddr, quoteTokenAddr);
+        await orderbookFactory
+          .connect(anotherAccount)
+          .placeSellOrder(limitPrice, quantity, baseTokenAddr, quoteTokenAddr);
+      });
+
+      it("should make a purchase", async function () {
+        let amount = (limitPrice * quantity) / BigInt(DECIMAL);
+
+        await orderbookFactory.buyAtMarketPrice(
+          amount,
+          baseTokenAddr,
+          quoteTokenAddr
+        );
+
+        expect(await orderbookFactory._balanceOf(baseTokenAddr)).to.equal(
+          BigInt(INITIAL_BAL) + quantity
+        );
+
+        expect(await orderbookFactory._balanceOf(quoteTokenAddr)).to.equal(
+          BigInt(INITIAL_BAL) - amount
+        );
+
+        expect(
+          await orderbookFactory
+            .connect(anotherAccount)
+            ._balanceOf(baseTokenAddr)
+        ).to.equal(BigInt(INITIAL_BAL) - quantity);
+
+        expect(
+          await orderbookFactory
+            .connect(anotherAccount)
+            ._balanceOf(quoteTokenAddr)
+        ).to.equal(BigInt(INITIAL_BAL) + amount);
+      });
+    });
+  });
+
+  describe("sell at market price", () => {
+    it("should revert with msg invalid params", async function () {
+      await expect(
+        orderbookFactory.sellAtMarketPrice(0, baseTokenAddr, quoteTokenAddr)
+      ).to.be.revertedWith("invalid params");
+    });
+
+    it("should revert with the custom error Insufficient_Balance", async function () {
+      await expect(
+        orderbookFactory.sellAtMarketPrice(10, baseTokenAddr, quoteTokenAddr)
+      ).to.be.revertedWithCustomError(orderbookFactory, "Insufficient_Balance");
+    });
+
+    it("should revert with custom error Orderbook_Not_Found", async function () {
+      await addFunds();
+      expect(await orderbookFactory._balanceOf(baseTokenAddr)).to.equal(
+        BigInt(INITIAL_BAL)
+      );
+      await expect(
+        orderbookFactory.sellAtMarketPrice(
+          BigInt(10 * DECIMAL),
+          baseTokenAddr,
+          quoteTokenAddr
+        )
+      ).to.be.revertedWithCustomError(orderbookFactory, "Orderbook_Not_Found");
+    });
+
+    describe("after placing some sell orders", () => {
+      let limitPrice = BigInt(10 * DECIMAL);
+      let quantity = BigInt(10 * DECIMAL);
+      beforeEach(async function () {
+        await addFunds();
+        await orderbookFactory.createOrderbook(baseTokenAddr, quoteTokenAddr);
+        await orderbookFactory
+          .connect(anotherAccount)
+          .placeBuyOrder(limitPrice, quantity, baseTokenAddr, quoteTokenAddr);
+      });
+
+      it("should make a purchase", async function () {
+        let amount = (limitPrice * quantity) / BigInt(DECIMAL);
+
+        expect(
+          await orderbookFactory
+            .connect(anotherAccount)
+            ._balanceOf(quoteTokenAddr)
+        ).to.equal(BigInt(INITIAL_BAL) - amount);
+
+        await orderbookFactory.sellAtMarketPrice(
+          quantity,
+          baseTokenAddr,
+          quoteTokenAddr
+        );
+
+        expect(await orderbookFactory._balanceOf(baseTokenAddr)).to.equal(
+          BigInt(INITIAL_BAL) - quantity
+        );
+
+        expect(await orderbookFactory._balanceOf(quoteTokenAddr)).to.equal(
+          BigInt(INITIAL_BAL) + amount
+        );
+
+        expect(
+          await orderbookFactory
+            .connect(anotherAccount)
+            ._balanceOf(baseTokenAddr)
+        ).to.equal(BigInt(INITIAL_BAL) + quantity);
+
+        expect(
+          await orderbookFactory.connect(anotherAccount)._balanceOf(quoteToken)
+        ).to.equal(BigInt(INITIAL_BAL) - amount);
+      });
     });
   });
 });
